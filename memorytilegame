@@ -1,0 +1,596 @@
+import itertools
+import random
+import sys
+from collections import defaultdict
+
+'''
+Program to play the Memory tile game.
+Choose the game level - Easy (4*4), Medium(6*6), Hard(8*8)
+Choose a tile to know what item it uncovers, pick another tile to find a match
+If matching tile is found, the tiles remain open else they close and allows the user to continue playing
+ '''
+
+board_size = 0
+
+list_main = []
+list_easy = ['Apple', 'Mango', 'Orange', 'Banana', 'Grape', 'Pineapple', 'Cherry', 'Berry']
+list_medium = ['Tiger', 'Lion', 'Zebra', 'Elephant', 'Monkey', 'Croc', 'Fish', 'Eagle', 'Duck', 'Lizard']
+list_hard = ['House', 'Bridge', 'Tree', 'Flower', 'Piano', 'Car', 'Train', 'Bus', 'Ship', 'Bike', 'Lemonade', 'Burger',
+             'IceCream', 'Noodle']
+
+board_as_list = []
+game_as_list = []
+unmasked_board_list = []
+unmasked_cell_pos = []
+
+cellkey_itemval_dict = {}
+itemkey_cellval_dict = defaultdict(list)
+
+
+''' 
+Initially cur_choice was defaulted to 0, but this shows warning when this function is called in the program
+and we are trying to assign tile1/tile2 to it which are tuples.
+
+The cur_choice is the current cell that the user chose to check its item,
+this will be passed whenever this function is called to highlight the player's current choices.
+
+After each try this function is also called to build the list of cells that correctly matched and uncovered by
+the player and print the board.If the last guess of the player was not a pair of match tiles, then the tiles that
+were highlighted during the current play, will not be included while printing this
+In this case cur_choice will not be passed as theer is no need to get the cell positions to be highlighted '''
+
+
+def show_unmasked_cells(tile_value, cur_choice=(), list_updt_flg='N'):
+    # 6
+    # if cur_choice  == 0:
+    if not cur_choice:
+        # print("cur_choice is empty")
+        # edit game_as_list and copy the unmasked co-ordinate positions to
+
+        # print("unmasked_cell_pos[-1][0]",list(unmasked_cell_pos[-1][0])[0])
+
+        # print("game_as_list before: ", game_as_list)
+        if list_updt_flg == 'Y':
+            for i in range(2):
+                game_as_list[list(unmasked_cell_pos[-1][i])[0]][list(unmasked_cell_pos[-1][i])[1]] = tile_value
+        # print("game_as_list after: ", game_as_list)
+        # print("game_as_list", game_as_list)
+        print("UNMASKED BOARD")
+        build_board(game_as_list)
+
+    # if value is not passed to this function, we could get the value for the unmasked cell as below
+    # print(cellkey_itemval_dict[unmasked_cell_pos[-1][0]])
+    else:
+        # print("cur_choice is NOT empty highlighting cur cells")
+        game_as_list[cur_choice[0]][cur_choice[1]] = '\033[1m' + tile_value + '\033[0m'  # print tile value in bold
+        print("CURRENT PLAY CELLS HIGHLIGHT")
+        build_board(game_as_list)
+
+def autoplay_all(iteratable):
+    # 5
+
+    cell_coord_auto = []  # to hold the cell co-ordinates
+    all_combination = []
+
+    # iteratable will be a list of range(size of board) , use product to get the cell co-ordinates as a list
+    for cell in itertools.product(iteratable, repeat=2):
+        cell_coord_auto.append(cell)
+
+    #print(cell_coord_auto)
+
+    for auto_combination in itertools.combinations(cell_coord_auto, 2):
+        all_combination.append(auto_combination)
+
+    print(all_combination)
+
+    while  all_combination:
+        print(all_combination)
+        print("I am here1")
+        for comb in all_combination:
+            print("I am here2")
+            print("********Checking combination:", comb)
+            sub_mask = []  # list to hold player's 2 current choices, clear it each time
+            print(sub_mask)
+
+            tile1 = comb[0]
+            tile2 = comb[1]
+
+            '''we got both cell choices already'''
+            print("First cell picked :", cellkey_itemval_dict[tile1])
+            sub_mask.append(tile1)
+            # print("cur_choice is passed at call")
+            show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], cur_choice=tile1)
+
+            print("You followed it with :", cellkey_itemval_dict[tile2])
+            sub_mask.append(tile2)
+            # print("cur_choice is passed at call")
+            show_unmasked_cells(tile_value=cellkey_itemval_dict[tile2], cur_choice=tile2)
+
+            # print("sub_mask:", sub_mask)
+
+            # warning: var tile1/tile2 maybe referenced before assignment, but I dont think that happens in this flow
+            if cellkey_itemval_dict[tile1] == cellkey_itemval_dict[tile2]:
+                print("Tiles match")
+                unmasked_cell_pos.append(sub_mask)  # if a correct pair was found, hold those cells in unmasked list
+                unmask_update = 'Y'
+                remove1 = [x for x in all_combination if (x[0] == comb[0] or x[1] == comb[0])]
+                remove2 = [x for x in all_combination if (x[0] == comb[1] or x[1] == comb[1])]
+                remove_list = remove1 + remove2
+                #remove the cells which are matched as they dont have to be iterated through again
+                #all_combination = list(set(all_combination)) - list(set(remove_list))
+                all_combination = [elem for elem in all_combination if elem not in remove_list]
+                print("I am here3 before break")
+                show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], list_updt_flg=unmask_update)
+                break
+                print("I am here4 after break")
+
+            else:
+                print("Tiles are different")
+                game_as_list[tile1[0]][tile1[1]] = 0
+                game_as_list[tile2[0]][tile2[1]] = 0
+                # print("game_as_list after closing unmatched cells",game_as_list)
+                unmask_update = 'N'
+
+            # print("unmasked_cell_pos",unmasked_cell_pos)
+            # print("board_size",board_size)
+
+            # we  pass tile1/tile2 to this function as value to populate the cell
+            # print("cur_choice is NOT passed at call")
+            show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], list_updt_flg=unmask_update)
+
+            # when no more keys, all cells would be uncovred. There is no need for play loop as well anyway
+            # play = False
+
+
+
+'''When you dint want to enter co-ordinates and just let the game go-on by itself for always matched pair scenarios'''
+
+
+def autoplay_positive():
+    # 5
+
+    print("itemkey_cellval_dict", itemkey_cellval_dict)
+    print("cellkey_itemval_dict", cellkey_itemval_dict)
+
+    '''itemkey_cellval_dict contains the item and cells where the item is present
+    For a flow we have every co-ordinate entered by user to be correct  and matches the uncovered tile every time'''
+
+    # iterate through itemkey_cellval_dict
+    for key in itemkey_cellval_dict:
+        print("Key is : ", key)
+        sub_mask = []  # list to hold player's 2 current choices, clear it each time
+        print(sub_mask)
+
+        usr_choice = itemkey_cellval_dict[key]
+        tile1 = usr_choice[0]
+        tile2 = usr_choice[1]
+
+        '''we got both cell choices already'''
+        print("First cell picked :", cellkey_itemval_dict[tile1])
+        sub_mask.append(tile1)
+        # print("cur_choice is passed at call")
+        show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], cur_choice=tile1)
+
+        print("You followed it with :", cellkey_itemval_dict[tile2])
+        sub_mask.append(tile2)
+        # print("cur_choice is passed at call")
+        show_unmasked_cells(tile_value=cellkey_itemval_dict[tile2], cur_choice=tile2)
+
+        # print("sub_mask:", sub_mask)
+
+        # warning: var tile1/tile2 maybe referenced before assignment, but I dont think that happens in this flow
+        if cellkey_itemval_dict[tile1] == cellkey_itemval_dict[tile2]:
+                print("Tiles match")
+                unmasked_cell_pos.append(sub_mask)  # if a correct pair was found, hold those cells in unmasked list
+                unmask_update = 'Y'
+        else:
+                print("Tiles are different")
+                game_as_list[tile1[0]][tile1[1]] = 0
+                game_as_list[tile2[0]][tile2[1]] = 0
+                # print("game_as_list after closing unmatched cells",game_as_list)
+                unmask_update = 'N'
+
+        # print("unmasked_cell_pos",unmasked_cell_pos)
+        # print("board_size",board_size)
+
+        # we  pass tile1/tile2 to this function as value to populate the cell
+        # print("cur_choice is NOT passed at call")
+        show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], list_updt_flg=unmask_update)
+
+        # when no more keys, all cells would be uncovred. There is no need for play loop as well anyway
+        # play = False
+
+
+def get_user_choice():
+    # 5
+
+    play = True
+    # chance = 0  # testing var, remove later
+    print("itemkey_cellval_dict", itemkey_cellval_dict)
+    print("cellkey_itemval_dict", cellkey_itemval_dict)
+    while play:
+        sub_mask = []  # list to hold player's 2 current choices, clear it each time
+        print(sub_mask)
+        for i in range(2):
+            '''we could also do it by numbering the cells as well and deciding the co-ordinates in the program based on the
+            cell num '''
+            # .split(',') to remove the , from the string
+            tile = input("Enter cell co-ordinates (row,col):1,2 /  2,3 etc:").split(',')
+            tile = tuple(map(int, tile))  # here, map converts elements in tile to int
+            print(tile)
+
+            '''we can check if the entered cell is already unmasked by checking in this list unmasked_cell_pos,
+            and ask user to re-try
+            this is an example of searching list of lists
+            commenting this, as we are not adding this feature as of now'''
+            # already_unmasked = tile in [j for i in unmasked_cell_pos for j in i]
+            # if already_unmasked == True:
+            #     print("Cell is already unmasked. Try a new one")
+
+            # also tile1 and tile2 should not be same, not checking this for now
+
+            if i == 0:
+                tile1 = tile  # (tile)
+                print(type(tile1))
+                print("First cell picked :", cellkey_itemval_dict[tile1])
+                sub_mask.append(tile1)
+                '''Expected type Int but got Tuple[int,.. ] instead coz in the show_unmasked_cells defenition,
+                cur_choice was initialised to 0 which makes python expect an int for that input parameter'''
+                # print("cur_choice is passed at call")
+                show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], cur_choice=tile1)
+            else:
+                tile2 = tile  # (tile)
+                print("You followed it with :",  cellkey_itemval_dict[tile2])
+                sub_mask.append(tile2)
+                # print("cur_choice is passed at call")
+                show_unmasked_cells(tile_value=cellkey_itemval_dict[tile2], cur_choice=tile2)
+
+        # print(sub_mask)
+
+        # warning: var tile1/tile2 maybe referenced before assignment, but I dont think that happens in this flow
+        if cellkey_itemval_dict[tile1] == cellkey_itemval_dict[tile2]:
+            print("Tiles match")
+            unmasked_cell_pos.append(sub_mask)  # if a correct pair was found, hold those cells in unmasked list
+            unmask_update = 'Y'
+            # print("unmasked_cell_pos is:", unmasked_cell_pos)
+        else:
+            print("Tiles are different")
+            game_as_list[tile1[0]][tile1[1]] = 0
+            game_as_list[tile2[0]][tile2[1]] = 0
+            # print("game_as_list after closing unmatched cells",game_as_list)
+            unmask_update = 'N'
+
+        # print("unmasked_cell_pos",unmasked_cell_pos)
+        # print("board_size",board_size)
+
+        # we  pass tile1/tile2 to this function as value to populate the cell
+        # print("cur_choice is NOT passed at call")
+        show_unmasked_cells(tile_value=cellkey_itemval_dict[tile1], list_updt_flg=unmask_update)
+        # chance +=1
+        # print("%d tries"%chance)
+        # if chance == 5:
+        all_unmasked = [elem for sub in game_as_list for elem in sub if elem == 0]
+        if not all_unmasked:  # if no 0 in list all_unmasked will be null
+            print("All cells uncovered. Ending game")
+            play = False
+
+
+# def get_user_choice_old():
+#     #without using dictionary
+#     play = True
+#     chance = 0  # testing var, remove later
+#     # print("itemkey_cellval_dict", itemkey_cellval_dict)
+#     # print("cellkey_itemval_dict", cellkey_itemval_dict)
+#     while play:
+#         sub_mask = []  # list to hold player's 2 current choices, clear it each time
+#         print(sub_mask)
+#         for i in range(2):
+#             # we could do it by numbering the cells as well and deciding the co-ordinates
+#             # in the program based on the cell num
+#             # .split(',') to remove the ','  from the string
+#             tile = input("Enter cell co-ordinates (row,col):1,2 /  2,3 etc:").split(',')
+#                         tile = list(map(int, tile)) # here, map converts elements in tile to int
+#             print(tile)
+#
+#             # we can check if the entered cell is already unmasked by checking in this list unmasked_cell_pos,
+#             # and ask user to re-try. This is an example of searching list of lists,commenting this,
+#             # as we are not adding this feature as of now
+#             # already_unmasked = tile in [j for i in unmasked_cell_pos for j in i]
+#             # if already_unmasked == True:
+#             #     print("Cell is already unmasked. Try a new one")
+#
+#             # also tile1 and tile2 should not be same, not checking this for now
+#
+#             if i == 0:
+#                 tile1 = list(tile)
+#                 print("First cell picked :",board_as_list[tile1[0]][tile1[1]])
+#                 sub_mask.append(tile1)
+#             else:
+#                 tile2 = list(tile)
+#                 print("You followed it with :", board_as_list[tile2[0]][tile2[1]])
+#                 sub_mask.append(tile2)
+#
+#         # print(sub_mask)
+#
+#         if board_as_list[tile1[0]][tile1[1]] == board_as_list[tile2[0]][tile2[1]]:
+#             print("Tiles match")
+#             unmasked_cell_pos.append(sub_mask)  # if a correct pair was found, hold those cells in unmasked list
+#         else:
+#             print("Tiles are different")
+#
+#         # print(unmasked_cell_pos)
+#
+#         chance +=1
+#         print("%d tries"%chance)
+#         if chance == 5:
+#             play = False
+
+''' This function assigns an item to 2 random cell positions in the list '''
+
+
+def place_items(iteratable):
+    # 4
+    cell_coord = []  # to hold the cell co-ordinates
+    all_combination = []
+    try:
+        # list_shuffle = random.shuffle(list_easy)  shuffle returns NONE, it does not retun the shuffled list
+        # length = 16
+
+        print("list main %s" % list_main)
+        # cell_pos_random = list(list_main)
+        # random.shuffle(cell_pos_random)
+
+        # print("Board before update %s" % board_as_list)
+        # print("unmasked_board_list : ", unmasked_board_list)
+
+        # iteratable will be a list of range(size of board) , use product to get the cell co-ordinates as a list
+        for cell in itertools.product(iteratable, repeat=2):
+            cell_coord.append(cell)
+
+        print(cell_coord)
+
+        # for auto_combination in itertools.combinations(cell_coord, 2):
+        #     all_combination.append(auto_combination)
+        #
+        # print(all_combination)
+
+        # alt way to shuffle list
+        # create a list of numbers to indicate the position of element of the list holding the cell co-ordinates
+        # this list must not be in the same order each time to avoid assigning the same item to a cell every time
+        cell_pos = range(len(cell_coord))
+        cell_pos_random = random.sample(cell_pos, len(cell_pos))
+
+        print(cell_pos_random)
+
+        # used this when list_main/cell_pos_random had numbers as elements.
+        # for item in list_main:
+        #     for i in range(2):
+        #         pos_index = cell_pos_random.pop(0)
+        #         item_pos = cell_coord[pos_index]
+        #         board_as_list[item_pos[0]][item_pos[1]] = item
+
+        # new logic to use string as elements of list_main/cell_pos_random
+        # item_pos = 0  # commenting as this initialisation is not needed
+        for item in list_main:
+            for i in range(2):  # loop twice as 1 element needs to be assigned to 2 cells
+                pos_index = cell_pos_random.pop(0)
+                item_pos = cell_coord[pos_index]
+                board_as_list[item_pos[0]][item_pos[1]] = item
+
+                # create an dictionary where cell co-ordinates are the keys and item is the value
+                cellkey_itemval_dict[item_pos] = item  # cell co-ordinate as key, item assigned as val
+
+                # item as key, cell containing the item as val {'Apple': []}
+                # itemkey_cellval_dict[item] = [item_pos]   # will hold only the second cell that has the element,
+                # first one will be overwritten.
+                # to have the item as key and have a list of cell positions as value, dictionary var must be of type
+                # defaultdict, so import defaultdict from collections,
+                # else u get KeyError, itemkey_cellval_dict is not a list
+
+                # not needed for the amin game, but used to implement the autp playong functiom
+                itemkey_cellval_dict[item].append(item_pos)
+
+        # print("itemkey_cellval_dict", itemkey_cellval_dict)
+        # print("cellkey_itemval_dict", cellkey_itemval_dict)
+        # print(cell_coord)
+
+        # print("Board after update %s" % board_as_list)
+        # print("unmasked_board_list : ", unmasked_board_list)
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
+
+
+# def place_items(iteratable):
+#     ''' Idea1: Initial idea was to get all cell positions as a list by using cartesian product.
+#                 Run a while loop over the cartesian product list
+#                 choose a random element position to pop from the list
+#                 (the changing length of the list each time an element was taken in to consideration , so length was
+#                  generated after each pop )
+#                 the idea was to assign 1 (same) item (say mango for player to uncover) to these 2 cells.
+#                 However the loop was running into unexpected error, at random iteration levels even though elemets
+#                 were present in the list to be 'pop'ed
+#
+#         It was not a good approach to iterate through a list who's length was changing.
+#
+#                 while board_pos:
+#                     for i in range(2):
+#                         item_pos.append(board_pos.pop(random.randint(0,len(board_pos))))
+#
+#     '''
+#     board_pos = []     # to indicate the cell number
+#     item_list = 0
+#     for cell in itertools.product(iteratable, repeat=2):
+#         board_pos.append(cell)
+#
+#     print(" board before update:")
+#     print(board_as_list)
+#
+#     try:
+#         while board_pos:
+#             print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+#             print("Cell co-ordinates to be set",board_pos)
+#             board_pos_len = len(board_pos)
+#             print("Cells pending to be set %d" %len(board_pos))
+#             pop_index = random.randint(0,board_pos_len)
+#             item_pos = []
+#             for i in range(2):
+#                 item_pos.append(board_pos.pop(random.randint(0,len(board_pos))))
+#             print(item_pos)
+#             time.sleep(2)
+#
+#             # print("Pop two")
+#             # item_pos2 = board_pos.pop(random.randint(0,len(board_pos)))
+#
+#
+#             # board_as_list[item_pos1[0]][item_pos1[1]] = list_easy[item_list]
+#             # board_as_list[item_pos2[0]][item_pos2[1]] = list_easy[item_list]
+#             #
+#             # item_list += 1
+#             #
+#             # print("Current board:")
+#             # print(board_as_list)
+#     except:
+#         print("Unexpected error:", sys.exc_info()[0])
+#         raise
+
+
+''' This function is only used to draw/print board and place the elements on it for display.
+The call to this can be avoided in cases when its not needed to display board to user'''
+
+
+def build_board(list_name=board_as_list):
+    # 3
+    floor = ' -----'*board_size
+
+    board_as_list_temp = list(list_name)  # create a temp list which we can modify without changing the original list
+
+    # modify board_as_list to check if it affects board_as_list_temp
+    # observation: Any change to board_as_list (original list) reflects in
+    # board_as_list_temp (copy of original list) as well
+    # list_name[0][0] = "hello"  #editing the original list
+    # print("Temp list 1: ",board_as_list_temp)
+    # print("Main list 1: ", list_name)
+
+    # modify copy of original list to check if it affects original list
+    # observation: Any change to board_as_list_temp (copy of original list)
+    # reflects in board_as_list (original list) as well
+    # board_as_list_temp[0][0] = "hello"  #editing the copy of original list
+    # print("Temp list 2: ",board_as_list_temp)
+    # print("Main list 2: ", list_name)
+
+    '''Note: if the lists being used were simple lists [0,0,0] we wouldn't have seen this issue .
+    as we are using list(list_name) Ex -  new_list = list(old_list)
+    But in this case we are using list of lists [[0,0],[0,0]] . Hence we encounter this behaviour.
+    However, above copy is not a problem in this case as the temp list is only local and for 1 time use.
+    It's a scenario to verify how list copy works'''
+
+    for i in range(board_size):
+        print(floor)
+        # Though we remove/pop elements from board_as_list_temp (copy of original list),
+        # board_as_list (original list)  remains unaffected
+        # must read how pop is different from other editing of the list
+        '''Note: In some of the Python tutorials I came across scenarios where 
+        the exercise was to draw a blank board of the required size.
+        Here I have tried to place the elements on the board as well.
+        If board is not in good shape as the elements are of varying lengths
+        but, its looks fine when elements are of same length'''
+        sub_list = board_as_list_temp.pop(0)
+        wall_elem = [str(elem) for elem in sub_list]
+        wall = '| ' + ' | '.join(wall_elem) + ' |'
+        print(wall)
+
+    print(floor)
+
+    # check if pop from temp edited main list
+    # print("Temp list 3: ",board_as_list_temp)
+    # print("Main list 3: ", list_name)
+
+
+def prepare_board():
+    # 2
+    # Create a play board (as list) with cell positions initialised to 0
+    for i in range(board_size):
+        board_as_list.append([0]*board_size)
+
+    '''Need another list that holds the cells that the player unmasks by turning the matching pair of tiles
+    Lets call that list as game_as_list'''
+
+    # copy method1: unmasked_board_list is empty outside this function
+    # game_as_list = list(board_as_list)
+
+    # copy method2: same result as method1- unmasked_board_list is empty outside this function
+    # game_as_list = board_as_list[:]
+
+    # copy method3: unmasked_board_list has values outside function,
+    # but whenever board_as_list is modified unmasked_board_list is also modified
+    # game_as_list[:] = list(board_as_list)
+
+    # copy method4: same result as method3 -unmasked_board_list has values outside function,
+    # but whenever board_as_list is modified unmasked_board_list is also modified
+    # game_as_list[:] = board_as_list[:]
+
+    '''The issue with copying list with sublist is that both the original and the
+     copied list point to the same sublist and unmasked_board_list/board_as_list are list of list
+      reference read: https://www.python-course.eu/deep_copy.php'''
+    # Not trying a deep copy in this program.
+
+    for i in range(board_size):
+        game_as_list.append([0]*board_size)
+
+    # print("game_as_list : ", game_as_list)
+    # print("board_as_list  :", board_as_list)
+
+
+def get_board_size(level):
+    # 1
+    global list_main
+    if level == 1:
+        size = 4
+        # iter_range = range(4) # this was to be used to determine cell co-ordinates later
+        list_main = list(list_easy)
+        # check if you modify list_main, will list easy get modified? Mostly no, coz these are not list of lists
+    elif level == 2:
+        size = 6
+        # iter_range = range(6)
+        list_main = list(list_easy)
+        list_main.extend(list_medium)
+    else:
+        size = 8
+        # iter_range = range(8)
+        list_main = list(list_easy + list_medium + list_hard)  # different ways to combine elements from different list
+
+    return size   # , list_main
+    #  we can return multiple values, as list_main was changed to be a global var, no need to retun it here
+
+
+if __name__ == "__main__":
+    game_level = int(input("Choose game level 1 for Easy, 2 for Medium , 3 for Hard:"))
+    board_size = get_board_size(game_level)
+
+    # print("Items to be placed under tiles:", list_main)
+
+    prepare_board()
+
+    # test if value is accessible outside the function
+    # print("after prepare_board unmasked_board_list : ", game_as_list)
+
+    # At this point, board_as_list is only initialies with 0 and this call will print a board with 0s, Can be skipped
+    # build_board()
+
+    place_items(range(board_size))
+
+    # Draw board with items assigned to each cell, this can be commented as we do not want to show this to the player.
+    print("Full board uncovered to help verify if the cells are unmasked correctly during game!!")
+    build_board()
+
+    # when you want to enter choice and play uncoment this and comment call to play_auto_positive
+    # get_user_choice() , autoplay_all
+
+    # when you want program to autoplay game for combinations that is always correct paired tiles
+    # use play_auto_positive and comment call to get_user_choice , autoplay_all
+    # autoplay_positive()
+
+    # when you want program to autoplay game for combinations matched and unmatched  tiles
+    # use autoplay_all and comment call to get_user_choice , autoplay_positive
+    autoplay_all(range(board_size))
